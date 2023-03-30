@@ -2,11 +2,10 @@
 #include <fstream>
 #include <vector>
 #include "SFML/Graphics.hpp"
+using namespace std;
 
 #include <chrono>
 #include <thread>
-
-using namespace std;
 using namespace std::this_thread;
 using namespace std::chrono;
 
@@ -14,7 +13,7 @@ using namespace std::chrono;
 
 void draw_image(sf::RenderWindow& window, int image_index, unsigned char* images)
 {
-	int scale = 4;
+	int scale = 8;
 	float x_pos = 100.0f;
 	float y_pos = 100.0f;
 	sf::Vertex box[5] =
@@ -32,7 +31,7 @@ void draw_image(sf::RenderWindow& window, int image_index, unsigned char* images
 		{
 			int index = image_index * 784 + row * 28 + column;
 			unsigned char pixel = images[index];
-			pixels[row * 28  + column] = sf::Vertex(sf::Vector2f(column * scale, row * scale), sf::Color(pixel, pixel, pixel));
+			pixels[row * 28 + column] = sf::Vertex(sf::Vector2f(column * scale, row * scale), sf::Color(pixel, pixel, pixel));
 		}
 	}
 	for (int i = 0; i < scale; i++)
@@ -55,30 +54,45 @@ int main()
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 	sf::RenderWindow window(sf::VideoMode(500, 500), "MNIST Database of Hand Written Digits", sf::Style::Close);
 	sf::Event event;
+	char byte;
 
-	ifstream file;
-	file.open("IDX/test-images.idx3-ubyte", ios::binary);
-
-	if (!file.is_open())
+	// Load in the Digit Images
+	ifstream images_file;
+	images_file.open("IDX/train-images.idx3-ubyte", ios::binary);
+	unsigned char* images = new unsigned char[60000 * 28 * 28];
+	if (!images_file.is_open())
 	{
 		cout << "Oh no! I couldn't open this file! :c\n";
 	}
-
-	unsigned char* bytes = new unsigned char[7840000];
-	char byte;
-	
-	// Throw away the first 16 bytes
-	for (int i = 0; i < 16; i++)
+	for (int i = 0; i < 16; i++) // Skip the first 16 bytes
 	{
-		file.read(&byte, 1);
+		images_file.read(&byte, 1);
 	}
-
-	// Read the rest of the file
-	for (int i = 0; i < 7840000; i++)
+	for (int i = 0; i < 60000 * 28 * 28; i++) // Read the rest of the bytes
 	{
-		file.read(&byte, 1);
-		bytes[i] = (unsigned char)byte;
+		images_file.read(&byte, 1);
+		images[i] = (unsigned char)byte;
 	}
+	images_file.close();
+
+	// Load in the Digit Labels
+	ifstream labels_file;
+	labels_file.open("IDX/train-labels.idx1-ubyte", ios::binary);
+	unsigned char* labels = new unsigned char[60000];
+	if (!labels_file.is_open())
+	{
+		cout << "Oh no! I couldn't open this file! :c\n";
+	}
+	for (int i = 0; i < 8; i++) // Skip the first 8 bytes
+	{
+		labels_file.read(&byte, 1);
+	}
+	for (int i = 0; i < 60000; i++) // Read the rest of the bytes
+	{
+		labels_file.read(&byte, 1);
+		labels[i] = (unsigned char)byte;
+	}
+	labels_file.close();
 
 	int image_index = 0;
 	while (window.isOpen())
@@ -91,13 +105,17 @@ int main()
 			}
 		}
 
-		cout << "Image index: " << image_index << "\n";
-		sleep_for(milliseconds(200));
-
 		window.clear(sf::Color(0, 0, 0));
-		draw_image(window, image_index++, bytes);
+		draw_image(window, image_index, images);
+		cout << "Label: " << (unsigned)labels[image_index] << "\n";
+		sleep_for(milliseconds(50));
+		image_index++;
 		window.display();
 	}
 
+	delete[] images;
+	delete[] labels;
+
 	return 0;
 }
+
