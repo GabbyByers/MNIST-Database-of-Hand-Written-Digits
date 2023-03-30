@@ -6,24 +6,32 @@
 using namespace std;
 #define _CRTDBG_MAP_ALLOC
 
-class matrix
+void draw_image(sf::RenderWindow& window, int image_index, unsigned char* images)
 {
-public:
-	int magic_number = 0;
-	unsigned char type_of_data = '\0';
-	unsigned char number_of_dimensions = '\0';
-
-
-	matrix()
+	sf::Vertex box[5] =
 	{
-
-	}
-
-	~matrix()
+		sf::Vertex(sf::Vector2f(0, 0), sf::Color(255, 255, 255)),
+		sf::Vertex(sf::Vector2f(28, 0), sf::Color(255, 255, 255)),
+		sf::Vertex(sf::Vector2f(28, 28), sf::Color(255, 255, 255)),
+		sf::Vertex(sf::Vector2f(0, 28), sf::Color(255, 255, 255)),
+		sf::Vertex(sf::Vector2f(0, 0), sf::Color(255, 255, 255))
+	};
+	sf::Vertex* pixels = new sf::Vertex[784];
+	for (int row = 0; row < 28; row++)
 	{
-
+		for (int column = 0; column < 28; column++)
+		{
+			int index = image_index * 784 + row * 28 + column;
+			unsigned char pixel = images[index];
+			pixels[row * 28  + column] = sf::Vertex(sf::Vector2f(column, row), sf::Color(pixel, pixel, pixel));
+		}
 	}
-};
+	sf::Transform transform = sf::Transform();
+	transform.translate(100.0f, 100.0f);
+	window.draw(pixels, 748, sf::Points, transform);
+	window.draw(box, 5, sf::LinesStrip, transform);
+	delete[] pixels;
+}
 
 int main()
 {
@@ -39,29 +47,23 @@ int main()
 		cout << "Oh no! I couldn't open this file! :c\n";
 	}
 
-	// Read this file into a vector of unsigned chars
-	vector<unsigned char> bytes;
+	unsigned char* bytes = new unsigned char[7840000];
 	char byte;
-	while (!file.eof())
-	{
-		file.read(&byte, 1);
-		bytes.push_back((unsigned char)byte);
-	}
-
-	cout << "The file has " << bytes.size() << " bytes.\n\n";
-
+	
+	// Throw away first 16 bytes
 	for (int i = 0; i < 16; i++)
 	{
-		cout << (unsigned)bytes[i] << "\n";
-		if ((i + 1) % 4 == 0) { cout << "\n"; }
+		file.read(&byte, 1);
 	}
 
-	int* head = reinterpret_cast<int*>(&bytes[0]);
-	for (int* ptr = head; ptr < head + 4; ptr++)
+	// Read the rest of the file
+	for (int i = 0; i < 7840000; i++)
 	{
-		cout << *ptr << "\n";
+		file.read(&byte, 1);
+		bytes[i] = (unsigned char)byte;
 	}
 
+	int image_index = 0;
 	while (window.isOpen())
 	{
 		while (window.pollEvent(event))
@@ -72,7 +74,10 @@ int main()
 			}
 		}
 
+		cout << "Image index: " << image_index << "\n";
+
 		window.clear(sf::Color(0, 0, 0));
+		draw_image(window, image_index++, bytes);
 		window.display();
 	}
 
